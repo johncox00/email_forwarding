@@ -5,3 +5,18 @@
 * Forwards to the email specified.
 * Tracks state to pick up where it left off.
 * Logs status for each message.
+
+
+Add a `.env` file that looks something like this:
+
+```
+EMAIL=youraddress@gmail.com 
+PW=y0VrP@s$w0rd
+FWD=afriend@zendesk.com
+```
+
+Run it:
+
+```
+./email
+```
