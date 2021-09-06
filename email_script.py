@@ -18,6 +18,7 @@ good_headers = [
                     "To",
                     "Content-Type",
                     "MIME-Version",
+                    "Message-ID"
                 ]
 
 def send_email(message):
