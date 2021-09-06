@@ -1,4 +1,8 @@
 import smtplib, imaplib, email, os, datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.message import MIMEMessage
+
 from typing import final
 from dotenv import load_dotenv
 
@@ -6,18 +10,22 @@ load_dotenv()
 
 sent_from = os.environ['EMAIL']
 password = os.environ['PW']
-forward_to = ""
+forward_to = os.environ['FWD']
+good_headers = [
+                    "Date",
+                    "Subject",
+                    "From",
+                    "To",
+                    "Content-Type",
+                    "MIME-Version",
+                ]
 
 def send_email(message):
-    try:
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
         server.ehlo()
         server.login(sent_from, password)
         to = [forward_to]
         server.sendmail(sent_from, to, message)
-    except:
-        pass
-    server.close()
 
 def logger(msg_num, msg = None):
     print(f"{num}", end="\r")
@@ -26,6 +34,39 @@ def logger(msg_num, msg = None):
     if msg:
         with open("log.txt", "a") as log:
             log.write(f"{msg_num} | {datetime.datetime.now().isoformat()} | {msg}\n")
+
+def create_msg(email_data):
+    original = email.message_from_string(email_data.decode('utf-8'))
+    for part in original.walk():
+        if (part.get('Content-Disposition')
+            and part.get('Content-Disposition').startswith("attachment")):
+
+            part.set_type("text/plain")
+            part.set_payload("Attachment removed: %s (%s, %d bytes)"
+                            %(part.get_filename(), 
+                            part.get_content_type(), 
+                            len(part.get_payload(decode=True))))
+            del part["Content-Disposition"]
+            del part["Content-Transfer-Encoding"]
+    for k, _v in original.items():
+        if k not in good_headers: original.replace_header(k, None)
+    original_from = original.get("From")
+    original_subject = original.get("Subject")
+
+    new = MIMEMultipart("mixed")
+    body = MIMEMultipart("alternative")
+    body.attach( MIMEText("(auto-forwarded)", "plain") )
+    body.attach( MIMEText("<html>(auto-forwarded)</html>", "html") )
+    new.attach(body)
+
+    new["Message-ID"] = email.utils.make_msgid()
+    new["In-Reply-To"] = original["Message-ID"]
+    new["References"] = original["Message-ID"]
+    new["Subject"] = "FWD: "+original["Subject"]
+    new["To"] = forward_to
+    new["From"] = sent_from
+    new.attach( MIMEMessage(original) )
+    return new, original_from, original_subject
 
 with imaplib.IMAP4_SSL(host="imap.gmail.com") as con:
     print("Logging in...")
@@ -48,23 +89,13 @@ with imaplib.IMAP4_SSL(host="imap.gmail.com") as con:
             try:
                 typ, data = con.fetch(num, '(RFC822)')
                 email_data = data[0][1]
-                message = email.message_from_string(email_data.decode('utf-8'))
-                original_from = message.get("From")
-                original_subject = message.get("Subject")
-                message.replace_header("To", forward_to)
-                message.replace_header("From", sent_from)
-                good_headers = [
-                    "Date",
-                    "Subject",
-                    "From",
-                    "To",
-                    "Content-Type",
-                    "MIME-Version",
-                ]
-                for k, v in message.items():
-                    if k not in good_headers: message.replace_header(k, None)
-                # send_email(message.as_string())
+                
+                new, original_from, original_subject = create_msg(email_data)
+                
+                send_email(new.as_string())
+                
                 logger(num, msg=f"Success: {original_from} : {original_subject}")
+                break
             except Exception as e:
                 logger(num, msg=e)
                 
