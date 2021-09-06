@@ -1,3 +1,4 @@
 .env
 state.txt
 log.txt
+__pycache__
