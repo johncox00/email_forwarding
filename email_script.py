@@ -95,7 +95,6 @@ with imaplib.IMAP4_SSL(host="imap.gmail.com") as con:
                 send_email(new.as_string())
                 
                 logger(num, msg=f"Success: {original_from} : {original_subject}")
-                break
             except Exception as e:
                 logger(num, msg=e)
                 
