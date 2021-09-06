@@ -6,6 +6,15 @@
 * Tracks state to pick up where it left off.
 * Logs status for each message.
 
+Using `Pipenv` for managing dependencies:
+
+```
+pip install pipenv
+pipenv virtualenv 3.9.0 email_forwarder
+pipenv activate email_forwarder
+pipenv install
+```
+
 
 Add a `.env` file that looks something like this:
 
