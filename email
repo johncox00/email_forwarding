@@ -1,3 +1,5 @@
 #!/bin/bash
 
-python email_script.py
+pyenv activate carpenterjames
+pipenv install
+pipenv run python email_script.py
